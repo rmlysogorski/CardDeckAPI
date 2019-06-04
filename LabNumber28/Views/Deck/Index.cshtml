@@ -1,0 +1,198 @@
+﻿@*<script src="~/Scripts/jquery-3.3.1.js"></script>*@
+<script type="text/javascript">
+    var deckID;
+    var draw5;
+    var count = 0;
+
+    function MakeNewDeck() {
+        $.ajax({
+            method: "GET",
+            dataType: "json",
+            url: "https://deckofcardsapi.com/api/deck/new/draw/?count=5",
+            success: function (result) {
+                count = 0;
+                console.log(result.deck_id);
+                deckID = result.deck_id;
+                var displayDisPile = document.getElementById("displayDiscardPile");
+                displayDisPile.innerHTML = "";
+                var displayDiscard = document.getElementById("discardPile");
+                displayDiscard.innerHTML = "";                
+                draw5 = result.cards;
+                DisplayCardInfo();                
+
+            }
+        });
+    }
+
+    function Draw5Cards(deckID) {
+        var theUrl = "https://deckofcardsapi.com/api/deck/" + deckID + "/draw/?count=5";
+        $.ajax({ 
+            method: "GET",
+            dataType: "json",
+            url: theUrl,
+            success: function (result) {
+                console.log(result);
+                draw5 = result.cards;
+                DisplayCardInfo();
+            }
+        });
+    }
+
+    function DrawACard(deckID, i) {
+        var theUrl = "https://deckofcardsapi.com/api/deck/" + deckID + "/draw/?count=1";
+        $.ajax({
+            method: "GET",
+            dataType: "json",
+            url: theUrl,
+            success: function (result) {
+                if (count < 52) {
+                    console.log(result);
+                    draw5[i] = result.cards[0];
+                    console.log(draw5);
+                    DisplayACard(i);
+                    count += 1;
+                }
+                else {
+                    var displayDiv = document.getElementById("card" + i);
+                    displayDiv.innerHTML = "";
+
+                }
+            }
+        });
+    }
+
+    function DisplayCardInfo() {
+       
+        for (i in draw5) {
+
+            var displayDiv = document.getElementById("card" + i);
+
+            displayDiv.innerHTML = "";
+
+            if (draw5[i].value === "KING" || draw5[i].value === "QUEEN" || draw5[i].value === "JACK" || draw5[i].value === "ACE") {
+                cardName = draw5[i].value[0] + " of " + "<img style='width:15px;padding:0;margin:0' src='../Content/" + draw5[i].suit + ".png' />'s";
+            }
+            else {
+                cardName = draw5[i].value + " of " + "<img style='width:15px;padding:0;margin:0' src='../Content/" + draw5[i].suit + ".png' />'s";
+            }        
+
+            var currentContent = displayDiv.innerHTML + "<form>";
+
+            displayDiv.innerHTML = currentContent + "<div class='cardShow'>" +
+                "<img  style='width:100px' src=" + draw5[i].image + " />" + "<p>" + cardName + "</p>" +
+                "<input type='checkbox' name='keep' /></div >";
+
+        }
+
+        displayDiv.innerHTML += "" +
+            "<div style='clear:left' class='cardShow'><button class='btn-success' type='submit' onclick='KeepAndDraw()'>Draw</button></div></form>";
+        count += 5;
+    }
+
+    function DisplayACard(i) {
+        var displayDiv = document.getElementById("card" + i);
+        displayDiv.innerHTML = "";
+        var cardName;
+
+        if (draw5[i].value === "KING" || draw5[i].value === "QUEEN" || draw5[i].value === "JACK" || draw5[i].value === "ACE") {
+            cardName = draw5[i].value[0] + " of " + "<img style='width:15px;padding:0;margin:0' src='../Content/" + draw5[i].suit + ".png' />'s";
+        }
+        else {
+            cardName = draw5[i].value + " of " + "<img style='width:15px;padding:0;margin:0' src='../Content/" + draw5[i].suit + ".png' />'s";
+        }        
+
+        var currentContent = "";
+
+        if (i === 0) {
+
+            currentContent = displayDiv.innerHTML + "<form>";
+        }
+
+        displayDiv.innerHTML = currentContent + "<div class='cardShow'>" +
+                "<img style='width:100px' src=" + draw5[i].image + " />" + "<p>" + cardName + "</p>" +
+                "<input type='checkbox' name='keep' /></div >";
+
+        if (i === 4) {
+            displayDiv.innerHTML += "<div style='clear:left' class='cardShow'><button class='btn-success' type='submit' onclick='KeepAndDraw()'>Draw</button></div></form>";
+        }        
+    }
+
+    function KeepAndDraw() {
+        var cardsToKeep = document.getElementsByName('keep');
+        console.log(cardsToKeep);
+        for (var i = 0; i < cardsToKeep.length; i++) {            
+            if (cardsToKeep[i].checked === false) {                
+                MoveToDiscardPile(draw5[i].code, deckID);
+                DrawACard(deckID, i);
+                cardsToKeep[i] = true;
+                var displayDisPile = document.getElementById("displayDiscardPile");
+                displayDisPile.innerHTML += "<img style='width:25px' src=" + draw5[i].image + " />";
+
+            }
+        }
+
+    } 
+
+    function MoveToDiscardPile(cardCode, deckID) {
+        var theUrl = "https://deckofcardsapi.com/api/deck/" + deckID + "/pile/discard/add/?cards=" + cardCode;
+        $.ajax({
+            method: "GET",
+            dataType: "json",
+            url: theUrl,
+            success: function (result) {
+                var displayDiv = document.getElementById("discardPile");
+                displayDiv.innerHTML = "";
+                displayDiv.innerHTML = "Discard: " + result.piles.discard.remaining;
+                
+            }
+            
+
+        });
+    }
+
+    function DisplayDiscardInfo(deckID) {
+        var theUrl = "https://deckofcardsapi.com/api/deck/" + deckID + "/pile/discard/list";
+        $.ajax({
+            method: "GET",
+            dataType: "json",
+            url: theUrl,
+            success: function (result) {
+                var displayDisPile = document.getElementById("displayDiscardPile");
+                displayDisPile.innerHTML += "<img src=" + result.piles.discard.cards[0].image + " />";
+            }
+        });
+    }
+    
+</script>
+@{
+    ViewBag.Title = "Deck API";
+}
+
+<h2>@ViewBag.Title</h2>
+
+<button class="btn-danger" onclick="MakeNewDeck()">Make a new Deck</button>
+@*<button class="btn-default" onclick="Draw5Cards(deckID)">Draw 5 Cards</button>*@
+<div id="card0"></div>
+<div id="card1"></div>
+<div id="card2"></div>
+<div id="card3"></div>
+<div id="card4"></div>
+<div id="discardPile" style="clear:left;"></div>
+<div id="displayDiscardPile" style="width:530px;height:auto;"></div>
+
+<div style="clear:both;height:50px"></div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $.ajax({
+            method: "GET",
+            dataType: "json",
+            url: "https://deckofcardsapi.com/api/deck/new/draw/?count=5",
+            success: function (result) {
+                console.log(result.deck_id);
+                deckID = result.deck_id;
+                draw5 = result.cards;
+                DisplayCardInfo();
+            }
+        });
+    });
+</script>
